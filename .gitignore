@@ -1,0 +1,8 @@
+coverage/
+.libs/
+*.gcda
+*.gcno
+*.profraw
+*.dSYM
+*.so
+.DS_Store
