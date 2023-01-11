@@ -1,12 +1,11 @@
-#include "bump.hpp"
-#include <cstddef>
+#include "bump2d.hpp"
 #include <lua.hpp>
 
-using namespace bump;
+using namespace bump2d;
 
-#define METANAME "BumpWorld"
+#define METANAME "_bump_world_2d"
 
-struct BumpWorldWorld {
+struct BumpWorld2d {
     World *world;
 };
 
@@ -63,16 +62,16 @@ static void assertIsRect(lua_State *L, int x, int y, int w, int h)
 
 static int worldProject(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
 
-    int item  = lua_tonumber(L, 2);
-    double x  = luaL_checknumber(L, 3);
-    double y  = luaL_checknumber(L, 4);
-    double w  = luaL_checknumber(L, 5);
-    double h  = luaL_checknumber(L, 6);
-    double gx = luaL_checknumber(L, 7);
-    double gy = luaL_checknumber(L, 8);
+    int item          = lua_tonumber(L, 2);
+    double x          = luaL_checknumber(L, 3);
+    double y          = luaL_checknumber(L, 4);
+    double w          = luaL_checknumber(L, 5);
+    double h          = luaL_checknumber(L, 6);
+    double gx         = luaL_checknumber(L, 7);
+    double gy         = luaL_checknumber(L, 8);
     ColFilter *filter = world->getFilterById(luaL_optinteger(L, 9, Slide));
 
     std::vector<Collision> items;
@@ -142,34 +141,34 @@ static int worldProject(lua_State *L)
 
 static int worldCountCells(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
     lua_pushnumber(L, world->countCells());
     return 1;
 }
 
 static int worldCountItems(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
     lua_pushnumber(L, world->countItems());
     return 1;
 }
 
 static int worldHasItem(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
-    int item             = lua_tonumber(L, 2);
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
+    int item          = lua_tonumber(L, 2);
     lua_pushboolean(L, world->hasItem(item));
     return 1;
 }
 
 static int worldGetRect(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
-    int item             = lua_tonumber(L, 2);
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
+    int item          = lua_tonumber(L, 2);
     double x, y, w, h;
     world->getRect(item, x, y, w, h);
     lua_pushnumber(L, x);
@@ -181,10 +180,10 @@ static int worldGetRect(lua_State *L)
 
 static int worldToWorld(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
-    int cx               = luaL_checknumber(L, 2);
-    int cy               = luaL_checknumber(L, 3);
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
+    int cx            = luaL_checknumber(L, 2);
+    int cy            = luaL_checknumber(L, 3);
     double x, y;
     world->toWorld(cx, cy, x, y);
     lua_pushnumber(L, x);
@@ -194,10 +193,10 @@ static int worldToWorld(lua_State *L)
 
 static int worldToCell(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
-    double x             = luaL_checknumber(L, 2);
-    double y             = luaL_checknumber(L, 3);
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
+    double x          = luaL_checknumber(L, 2);
+    double y          = luaL_checknumber(L, 3);
     int cx, cy;
     world->toCell(x, y, cx, cy);
     lua_pushnumber(L, cx);
@@ -207,12 +206,12 @@ static int worldToCell(lua_State *L)
 
 static int worldQueryRect(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
-    double x             = luaL_checknumber(L, 2);
-    double y             = luaL_checknumber(L, 3);
-    double w             = luaL_checknumber(L, 4);
-    double h             = luaL_checknumber(L, 5);
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
+    double x          = luaL_checknumber(L, 2);
+    double y          = luaL_checknumber(L, 3);
+    double w          = luaL_checknumber(L, 4);
+    double h          = luaL_checknumber(L, 5);
 
     ItemFilter *f = NULL;
     std::set<int> items;
@@ -229,8 +228,8 @@ static int worldQueryRect(lua_State *L)
 
 static int worldQueryPoint(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
 
     double x      = luaL_checknumber(L, 2);
     double y      = luaL_checknumber(L, 3);
@@ -249,8 +248,8 @@ static int worldQueryPoint(lua_State *L)
 
 static int worldQuerySegment(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
 
     double x1     = luaL_checknumber(L, 2);
     double y1     = luaL_checknumber(L, 3);
@@ -271,7 +270,7 @@ static int worldQuerySegment(lua_State *L)
 
 // static int worldQuerySegmentWithCoords(lua_State *L)
 // {
-//     BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
+//     BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
 //     World *world         = bump->world;
 
 //     double x1     = luaL_checknumber(L, 2);
@@ -283,7 +282,8 @@ static int worldQuerySegment(lua_State *L)
 //     world->querySegmentWithCoords(x1, y1, x2, y2, f, items);
 //     lua_createtable(L, items.size(), 0);
 //     int n = 0;
-//     for (std::vector<ItemInfo>::iterator it = items.begin(); it != items.end();
+//     for (std::vector<ItemInfo>::iterator it = items.begin(); it !=
+//     items.end();
 //          it++) {
 //         lua_createtable(L, 0, 7);
 //         lua_pushnumber(L, (*it).item);
@@ -311,8 +311,8 @@ static int worldAdd(lua_State *L)
 {
     assertIsRect(L, 2, 3, 4, 5);
 
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
 
     double x = luaL_checknumber(L, 2);
     double y = luaL_checknumber(L, 3);
@@ -328,17 +328,17 @@ static int worldAdd(lua_State *L)
 
 static int worldRemove(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
-    int item             = lua_tonumber(L, 2);
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
+    int item          = lua_tonumber(L, 2);
     world->remove(item);
     return 0;
 }
 
 static int worldClear(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
     world->clear();
     return 0;
 }
@@ -346,25 +346,25 @@ static int worldClear(lua_State *L)
 static int worldUpdate(lua_State *L)
 {
     assertIsRect(L, 3, 4, 5, 6);
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
-    int item             = lua_tonumber(L, 2);
-    double x             = luaL_checknumber(L, 3);
-    double y             = luaL_checknumber(L, 4);
-    double w             = luaL_checknumber(L, 5);
-    double h             = luaL_checknumber(L, 6);
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
+    int item          = lua_tonumber(L, 2);
+    double x          = luaL_checknumber(L, 3);
+    double y          = luaL_checknumber(L, 4);
+    double w          = luaL_checknumber(L, 5);
+    double h          = luaL_checknumber(L, 6);
     world->update(item, x, y, w, h);
     return 0;
 }
 
 static int worldMove(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
-    int item             = lua_tonumber(L, 2);
-    double x             = luaL_checknumber(L, 3);
-    double y             = luaL_checknumber(L, 4);
-    ColFilter *filter    = world->getFilterById(luaL_optinteger(L, 5, Slide));
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
+    int item          = lua_tonumber(L, 2);
+    double x          = luaL_checknumber(L, 3);
+    double y          = luaL_checknumber(L, 4);
+    ColFilter *filter = world->getFilterById(luaL_optinteger(L, 5, Slide));
 
     double ax, ay;
     std::vector<Collision> items;
@@ -448,15 +448,15 @@ static int worldMove(lua_State *L)
 
 static int worldCellSize(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
+    World *world      = bump->world;
     lua_pushnumber(L, world->cellSize);
     return 1;
 }
 
 static int bumpWorldRelease(lua_State *L)
 {
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
+    BumpWorld2d *bump = (BumpWorld2d *)lua_touserdata(L, 1);
     if (NULL == bump) {
         return luaL_argerror(L, 1, "invalid lua-bump pointer");
     }
@@ -479,7 +479,6 @@ static int bumpWorldRelease(lua_State *L)
     world->responses.erase(Cross);
     world->responses.erase(Bounce);
     world->responses.erase(Slide);
-
 
     ColFilter *filterTouch = world->getFilterById(Touch);
     delete filterTouch;
@@ -512,10 +511,9 @@ static int bumpNewWorld(lua_State *L)
     }
     int cs = luaL_optinteger(L, 1, 64);
 
-    BumpWorldWorld *bump =
-        (BumpWorldWorld *)lua_newuserdatauv(L, sizeof(World), 0);
-    World *world = new World(cs);
-    bump->world  = world;
+    BumpWorld2d *bump = (BumpWorld2d *)lua_newuserdatauv(L, sizeof(World), 0);
+    World *world      = new World(cs);
+    bump->world       = world;
 
     CrossFilter *filterCross   = new CrossFilter();
     TouchFilter *filterTouch   = new TouchFilter();
@@ -540,24 +538,24 @@ static int bumpNewWorld(lua_State *L)
     if (luaL_newmetatable(L, METANAME)) // mt
     {
         luaL_Reg l[] = {
-            {"project",                worldProject               },
-            {"countCells",             worldCountCells            },
-            {"hasItem",                worldHasItem               },
-            {"countItems",             worldCountItems            },
-            {"getRect",                worldGetRect               },
-            {"toWorld",                worldToWorld               },
-            {"toCell",                 worldToCell                },
-            {"queryRect",              worldQueryRect             },
-            {"queryPoint",             worldQueryPoint            },
-            {"querySegment",           worldQuerySegment          },
-            // {"querySegmentWithCoords", worldQuerySegmentWithCoords},
-            {"add",                    worldAdd                   },
-            {"remove",                 worldRemove                },
-            {"update",                 worldUpdate                },
-            {"move",                   worldMove                  },
-            {"cellSize",               worldCellSize              },
-            {"clear",                  worldClear                 },
-            {NULL,                     NULL                       }
+            {"project",      worldProject     },
+            {"countCells",   worldCountCells  },
+            {"hasItem",      worldHasItem     },
+            {"countItems",   worldCountItems  },
+            {"getRect",      worldGetRect     },
+            {"toWorld",      worldToWorld     },
+            {"toCell",       worldToCell      },
+            {"queryRect",    worldQueryRect   },
+            {"queryPoint",   worldQueryPoint  },
+            {"querySegment", worldQuerySegment},
+ // {"querySegmentWithCoords", worldQuerySegmentWithCoords},
+            {"add",          worldAdd         },
+            {"remove",       worldRemove      },
+            {"update",       worldUpdate      },
+            {"move",         worldMove        },
+            {"cellSize",     worldCellSize    },
+            {"clear",        worldClear       },
+            {NULL,           NULL             }
         };
         luaL_newlib(L, l);              //{}
         lua_setfield(L, -2, "__index"); // mt[__index] = {}
@@ -746,7 +744,7 @@ static int rectDetectCollision(lua_State *L)
 }
 
 extern "C" {
-int LUAMOD_API luaopen_bump(lua_State *L)
+int LUAMOD_API luaopen_bump2d(lua_State *L)
 {
     const luaL_Reg bumpFuncs[] = {
         {"newWorld", bumpNewWorld},

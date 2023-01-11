@@ -7,7 +7,7 @@
 #include <set>
 #include <vector>
 
-namespace bump
+namespace bump2d
 {
 
 #define UNUSED(x) (void)(x)

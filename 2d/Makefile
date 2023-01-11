@@ -1,9 +1,9 @@
-SKYNET_ROOT ?= ../skynet
+SKYNET_ROOT ?= ../../skynet
 include $(SKYNET_ROOT)/platform.mk
 
 PLAT ?= none
 
-TARGET = ./bump.so
+TARGET = ./bump2d.so
 
 CXX=g++
 

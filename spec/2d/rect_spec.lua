@@ -1,4 +1,4 @@
-local bump = require('bump')
+local bump = require('bump2d')
 local test = require('u-test')
 
 local detect = bump.rect.detectCollision
