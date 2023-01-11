@@ -31,59 +31,6 @@ static double nearest(double x, double a, double b)
     return fabs(a - x) < fabs(b - x) ? a : b;
 }
 
-struct ColFilter {
-    virtual int Filter(int item, int other) = 0;
-    virtual ~ColFilter(){};
-};
-
-struct SlideFilter : ColFilter {
-    int Filter(int item, int other)
-    {
-        UNUSED(item);
-        UNUSED(other);
-        return Slide;
-    };
-};
-
-struct TouchFilter : ColFilter {
-    int Filter(int item, int other)
-    {
-        UNUSED(item);
-        UNUSED(other);
-        return Touch;
-    };
-};
-
-struct CrossFilter : ColFilter {
-    int Filter(int item, int other)
-    {
-        UNUSED(item);
-        UNUSED(other);
-        return Cross;
-    };
-};
-
-struct BounceFilter : ColFilter {
-    int Filter(int item, int other)
-    {
-        UNUSED(item);
-        UNUSED(other);
-        return Bounce;
-    };
-};
-
-struct VisitedFilter : ColFilter {
-    std::set<int> visited;
-    ColFilter *filter;
-    int Filter(int item, int other)
-    {
-        if (visited.find(other) != visited.end()) {
-            return 0;
-        }
-        return filter->Filter(item, other);
-    }
-};
-
 /*
 ------------------------------------------
 -- Rectangle functions
@@ -416,6 +363,27 @@ static void grid_toCellRect(int cellSize, double x, double y, double w,
 }
 
 struct World;
+
+/*------------------------------------------
+ -- ColFilter
+ ------------------------------------------*/
+
+struct ColFilter {
+    virtual int Filter(int item, int other) = 0;
+    virtual ~ColFilter(){};
+};
+
+struct VisitedFilter : ColFilter {
+    std::set<int> visited;
+    ColFilter *filter;
+    int Filter(int item, int other)
+    {
+        if (visited.find(other) != visited.end()) {
+            return 0;
+        }
+        return filter->Filter(item, other);
+    }
+};
 
 /*------------------------------------------
  -- Responses
@@ -910,6 +878,43 @@ struct World {
         actualX = goalX;
         actualY = goalY;
     }
+};
+
+
+struct SlideFilter : ColFilter {
+    int Filter(int item, int other)
+    {
+        UNUSED(item);
+        UNUSED(other);
+        return Slide;
+    };
+};
+
+struct TouchFilter : ColFilter {
+    int Filter(int item, int other)
+    {
+        UNUSED(item);
+        UNUSED(other);
+        return Touch;
+    };
+};
+
+struct CrossFilter : ColFilter {
+    int Filter(int item, int other)
+    {
+        UNUSED(item);
+        UNUSED(other);
+        return Cross;
+    };
+};
+
+struct BounceFilter : ColFilter {
+    int Filter(int item, int other)
+    {
+        UNUSED(item);
+        UNUSED(other);
+        return Bounce;
+    };
 };
 
 struct TouchResponse : Response {

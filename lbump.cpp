@@ -1,4 +1,5 @@
 #include "bump.hpp"
+#include <cstddef>
 #include <lua.hpp>
 
 using namespace bump;
@@ -268,43 +269,43 @@ static int worldQuerySegment(lua_State *L)
     return 1;
 }
 
-static int worldQuerySegmentWithCoords(lua_State *L)
-{
-    BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
-    World *world         = bump->world;
+// static int worldQuerySegmentWithCoords(lua_State *L)
+// {
+//     BumpWorldWorld *bump = (BumpWorldWorld *)lua_touserdata(L, 1);
+//     World *world         = bump->world;
 
-    double x1     = luaL_checknumber(L, 2);
-    double y1     = luaL_checknumber(L, 3);
-    double x2     = luaL_checknumber(L, 4);
-    double y2     = luaL_checknumber(L, 5);
-    ItemFilter *f = NULL;
-    std::vector<ItemInfo> items;
-    world->querySegmentWithCoords(x1, y1, x2, y2, f, items);
-    lua_createtable(L, items.size(), 0);
-    int n = 0;
-    for (std::vector<ItemInfo>::iterator it = items.begin(); it != items.end();
-         it++) {
-        lua_createtable(L, 0, 7);
-        lua_pushnumber(L, (*it).item);
-        lua_setfield(L, -2, "item");
-        lua_pushnumber(L, (*it).ti1);
-        lua_setfield(L, -2, "ti1");
-        lua_pushnumber(L, (*it).ti2);
-        lua_setfield(L, -2, "ti2");
-        lua_pushnumber(L, (*it).x1);
-        lua_setfield(L, -2, "x1");
-        lua_pushnumber(L, (*it).y1);
-        lua_setfield(L, -2, "y1");
-        lua_pushnumber(L, (*it).x2);
-        lua_setfield(L, -2, "x2");
-        lua_pushnumber(L, (*it).y2);
-        lua_setfield(L, -2, "y2");
+//     double x1     = luaL_checknumber(L, 2);
+//     double y1     = luaL_checknumber(L, 3);
+//     double x2     = luaL_checknumber(L, 4);
+//     double y2     = luaL_checknumber(L, 5);
+//     ItemFilter *f = NULL;
+//     std::vector<ItemInfo> items;
+//     world->querySegmentWithCoords(x1, y1, x2, y2, f, items);
+//     lua_createtable(L, items.size(), 0);
+//     int n = 0;
+//     for (std::vector<ItemInfo>::iterator it = items.begin(); it != items.end();
+//          it++) {
+//         lua_createtable(L, 0, 7);
+//         lua_pushnumber(L, (*it).item);
+//         lua_setfield(L, -2, "item");
+//         lua_pushnumber(L, (*it).ti1);
+//         lua_setfield(L, -2, "ti1");
+//         lua_pushnumber(L, (*it).ti2);
+//         lua_setfield(L, -2, "ti2");
+//         lua_pushnumber(L, (*it).x1);
+//         lua_setfield(L, -2, "x1");
+//         lua_pushnumber(L, (*it).y1);
+//         lua_setfield(L, -2, "y1");
+//         lua_pushnumber(L, (*it).x2);
+//         lua_setfield(L, -2, "x2");
+//         lua_pushnumber(L, (*it).y2);
+//         lua_setfield(L, -2, "y2");
 
-        lua_rawseti(L, -2, ++n);
-    }
-    lua_remove(L, -2);
-    return 1;
-}
+//         lua_rawseti(L, -2, ++n);
+//     }
+//     lua_remove(L, -2);
+//     return 1;
+// }
 
 static int worldAdd(lua_State *L)
 {
@@ -500,7 +501,7 @@ static int bumpWorldRelease(lua_State *L)
     world->clear();
 
     delete world;
-    bump->world = nullptr;
+    bump->world = NULL;
     return 0;
 }
 
@@ -549,7 +550,7 @@ static int bumpNewWorld(lua_State *L)
             {"queryRect",              worldQueryRect             },
             {"queryPoint",             worldQueryPoint            },
             {"querySegment",           worldQuerySegment          },
-            {"querySegmentWithCoords", worldQuerySegmentWithCoords},
+            // {"querySegmentWithCoords", worldQuerySegmentWithCoords},
             {"add",                    worldAdd                   },
             {"remove",                 worldRemove                },
             {"update",                 worldUpdate                },
