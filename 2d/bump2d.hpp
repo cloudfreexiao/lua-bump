@@ -173,7 +173,8 @@ struct Collision {
     Point normal;
     Point touch;
     Point response;
-    Rect itemRect, otherRect;
+    Rect itemRect;
+    Rect otherRect;
 };
 
 static bool rect_detectCollision(double x1, double y1, double w1, double h1,
@@ -421,10 +422,10 @@ struct ItemFilter {
 struct World {
     int cellSize;
     int itemId;
-    std::map<int, Rect> rects;
-    std::map<int, std::map<int, Cell> > rows;
     std::map<int, Response *> responses;
     std::map<int, ColFilter *> filters;
+    std::map<int, Rect> rects;
+    std::map<int, std::map<int, Cell> > rows;
 
     World(int cs)
     {
