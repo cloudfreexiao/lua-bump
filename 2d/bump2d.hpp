@@ -508,6 +508,7 @@ struct World {
             return;
         ct->cells.insert(&cell->second);
     }
+    
     std::set<Cell *> getCellsTouchedBySegment(double x1, double y1, double x2,
                                               double y2)
     {

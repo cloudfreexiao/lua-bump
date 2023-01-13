@@ -509,7 +509,7 @@ struct World {
     std::map<int, ColFilter *> filters;
 
     std::map<int, Cube> cubes;
-    std::map<int, std::map<int, std::map<int, Cell> > > cells;
+    std::map<int, std::map<int, std::map<int, Cell>>> cells;
 
     World(int cs)
     {
@@ -533,6 +533,34 @@ struct World {
     void addItemToCell(int item, int cx, int cy, int cz)
     {
         cells[cz][cy][cx].items.insert(item);
+    }
+
+    bool removeItemFromCell(int item, int cx, int cy, int cz)
+    {
+        std::map<int, std::map<int, std::map<int, Cell>>>::iterator plane =
+            cells.find(cz);
+        if (plane == cells.end()) {
+            return false;
+        }
+        std::map<int, std::map<int, Cell>>::iterator row =
+            plane->second.find(cy);
+        if (row == plane->second.end()) {
+            return false;
+        }
+        std::map<int, Cell>::iterator cell = row->second.find(cx);
+        if (cell == row->second.end()) {
+            return false;
+        }
+        if (cell->second.items.find(item) == cell->second.items.end()) {
+            return false;
+        }
+        cell->second.items.erase(item);
+        return true;
+    }
+
+   void getDictItemsInCellCube(int cx, int cy, int cz, int cw,
+                                            int ch, int cd, std::set<int> &items_dict)
+    {
     }
 };
 
