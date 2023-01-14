@@ -196,12 +196,12 @@ struct Collision {
     bool overlaps;
     double ti;
     double distance;
+    int other;
+    int type;
     Point move;
     Point normal;
     Point touch;
-    // int other;
-    // int type;
-    // Point response;
+    Point response;
 };
 
 static bool cube_detectCollision(double x1, double y1, double z1, double w1,
@@ -509,7 +509,7 @@ struct World {
     std::map<int, ColFilter *> filters;
 
     std::map<int, Cube> cubes;
-    std::map<int, std::map<int, std::map<int, Cell>>> cells;
+    std::map<int, std::map<int, std::map<int, Cell> > > cells;
 
     World(int cs)
     {
@@ -537,12 +537,12 @@ struct World {
 
     bool removeItemFromCell(int item, int cx, int cy, int cz)
     {
-        std::map<int, std::map<int, std::map<int, Cell>>>::iterator plane =
+        std::map<int, std::map<int, std::map<int, Cell> > >::iterator plane =
             cells.find(cz);
         if (plane == cells.end()) {
             return false;
         }
-        std::map<int, std::map<int, Cell>>::iterator row =
+        std::map<int, std::map<int, Cell> >::iterator row =
             plane->second.find(cy);
         if (row == plane->second.end()) {
             return false;
@@ -558,9 +558,493 @@ struct World {
         return true;
     }
 
-   void getDictItemsInCellCube(int cx, int cy, int cz, int cw,
-                                            int ch, int cd, std::set<int> &items_dict)
+    void getDictItemsInCellCube(int cx, int cy, int cz, int cw, int ch, int cd,
+                                std::set<int> &items_dict)
     {
+        for (int z = cz; z < cz + cd; z++) {
+            std::map<int, std::map<int, std::map<int, Cell> > >::iterator plane =
+                cells.find(z);
+            if (plane == cells.end()) {
+                continue;
+            }
+            for (int y = cy; y < cy + ch; y++) {
+                std::map<int, std::map<int, Cell> >::iterator row =
+                    plane->second.find(y);
+                if (row == plane->second.end()) {
+                    continue;
+                }
+                for (int x = cx; x < cx + cw; x++) {
+                    std::map<int, Cell>::iterator cell = row->second.find(x);
+                    if (cell == row->second.end()) {
+                        continue;
+                    }
+                    if (cell->second.items.size() > 0) {
+                        for (std::set<int>::iterator it =
+                                 cell->second.items.begin();
+                             it != cell->second.items.end(); it++) {
+                            items_dict.insert(*it);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    struct _CellTraversal {
+        World *world;
+        std::set<Cell *> cells;
+    };
+
+    static void cellsTraversal_(void *ctx, int cx, int cy, int cz)
+    {
+        struct _CellTraversal *ct = (struct _CellTraversal *)ctx;
+
+        std::map<int, std::map<int, std::map<int, Cell> > >::iterator plane =
+            ct->world->cells.find(cz);
+        if (plane == ct->world->cells.end()) {
+            return;
+        }
+        std::map<int, std::map<int, Cell> >::iterator row =
+            plane->second.find(cy);
+        if (row == plane->second.end()) {
+            return;
+        }
+        std::map<int, Cell>::iterator cell = row->second.find(cx);
+        if (cell == row->second.end())
+            return;
+        ct->cells.insert(&cell->second);
+    }
+    std::set<Cell *> getCellsTouchedBySegment(double x1, double y1, double z1,
+                                              double x2, double y2, double z2)
+    {
+        struct _CellTraversal ct;
+        ct.world = this;
+        grid_traverse(cellSize, x1, y1, z1, x2, y2, z2, cellsTraversal_, &ct);
+        return ct.cells;
+    }
+
+    void getInfoAboutItemsTouchedBySegment(double x1, double y1, double z1,
+                                           double x2, double y2, double z2,
+                                           ItemFilter *filter,
+                                           std::vector<ItemInfo> &itemInfo)
+    {
+        std::set<Cell *> cells =
+            getCellsTouchedBySegment(x1, y1, z1, x2, y2, z2);
+
+        std::set<int> visited;
+
+        for (std::set<Cell *>::iterator it = cells.begin(); it != cells.end();
+             it++) {
+            Cell *cell = (*it);
+            for (std::set<int>::iterator i = cell->items.begin();
+                 i != cell->items.end(); i++) {
+                if (visited.find(*i) == visited.end()) {
+                    visited.insert(*i);
+                    if ((!filter) || filter->Filter(*i)) {
+                        Cube c = cubes[*i];
+                        double nx1, ny1, nz1, nx2, ny2, nz2;
+                        double ti1 = 0;
+                        double ti2 = 1;
+
+                        cube_getSegmentIntersectionIndices(
+                            c.x, c.y, c.z, c.w, c.h, c.d, x1, y1, z1, x2, y2,
+                            z2, ti1, ti2, nx1, ny1, nz1, nx2, ny2, nz2);
+                        if (ti1 && (((0 < ti1) && (ti1 < 1)) ||
+                                    ((0 < ti2) && (ti2 < 1)))) {
+                            // -- the sorting is according to the t of an
+                            // infinite line, not the segment
+                            double tii0 = -MATH_HUGE;
+                            double tii1 = MATH_HUGE;
+
+                            cube_getSegmentIntersectionIndices(
+                                c.x, c.y, c.z, c.w, c.h, c.d, x1, y1, z1, x2,
+                                y2, z2, tii0, tii1, nx1, ny1, nz1, nx2, ny2,
+                                nz2);
+
+                            ItemInfo ii;
+                            ii.item   = *i;
+                            ii.ti1    = ti1;
+                            ii.ti2    = ti2;
+                            ii.weight = tii0 < tii1 ? tii0 : tii1;
+                            itemInfo.push_back(ii);
+                        }
+                    }
+                }
+            }
+        }
+
+        std::sort(itemInfo.begin(), itemInfo.end(), sortByWeight);
+    }
+
+    Response *getResponseById(int id)
+    {
+        return responses[id];
+    }
+
+    void addResponse(int id, Response *response)
+    {
+        responses[id] = response;
+    }
+
+    void addFilter(int id, ColFilter *filter)
+    {
+        filters[id] = filter;
+    }
+
+    ColFilter *getFilterById(int id)
+    {
+        return filters[id];
+    }
+
+    void getCube(int item, double &x, double &y, double &z, double &w,
+                 double &h, double &d)
+    {
+        Cube c = cubes[item];
+        x      = c.x;
+        y      = c.y;
+        z      = c.z;
+        w      = c.w;
+        h      = c.h;
+        d      = c.d;
+    }
+
+    void project(int item, double x, double y, double z, double w, double h,
+                 double d, double goalX, double goalY, double goalZ,
+                 ColFilter *filter, std::vector<Collision> &collisions)
+    {
+        std::set<int> visited;
+        if (item) {
+            visited.insert(item);
+        }
+
+        // -- This could probably be done with less cells using a
+        //           polygon raster over the cells instead of a
+        //   -- bounding cube of the whole movement. Conditional to building a
+        //   queryPolygon method
+
+        double tx1 = (goalX < x) ? goalX : x;
+        double ty1 = (goalY < y) ? goalY : y;
+        double tz1 = (goalY < z) ? goalY : z;
+
+        double tx2 = ((goalX + w) > (x + w)) ? goalX + w : x + w;
+        double ty2 = ((goalY + h) > (y + h)) ? goalY + h : y + h;
+        double tz2 = ((goalY + d) > (y + d)) ? goalY + d : y + d;
+
+        double tw = tx2 - tx1;
+        double th = ty2 - ty1;
+        double td = tz2 - tz1;
+
+        int cx, cy, cz, cw, ch, cd;
+        grid_toCellCube(cellSize, tx1, ty1, tz1, tw, th, td, cx, cy, cz, cw, ch,
+                        cd);
+
+        std::set<int> dictItemsInCellRect;
+        getDictItemsInCellCube(cx, cy, cz, cw, ch, cd, dictItemsInCellRect);
+
+        for (std::set<int>::iterator it = dictItemsInCellRect.begin();
+             it != dictItemsInCellRect.end(); it++) {
+            int other = *it;
+            if (visited.find(other) == visited.end()) {
+                visited.insert(other);
+                int responseId = filter->Filter(item, other);
+                if (responseId > 0) {
+                    double ox, oy, oz, ow, oh, od;
+                    getCube(other, ox, oy, oz, ow, oh, od);
+                    Collision col;
+                    if (cube_detectCollision(x, y, z, w, h, d, ox, oy, oz, ow,
+                                             oh, od, goalX, goalY, goalZ,
+                                             col)) {
+                        col.other = other;
+                        col.item  = item;
+                        col.type  = responseId;
+                        collisions.push_back(col);
+                    }
+                }
+            }
+        }
+
+        std::sort(collisions.begin(), collisions.end(), sortByTiAndDistance);
+    }
+
+    void projectMove(int item, double x, double y, double z, double w, double h,
+                     double d, double goalX, double goalY, double goalZ,
+                     ColFilter *filter, double &actualX, double &actualY,
+                     double &actualZ, std::vector<Collision> &cols)
+    {
+        VisitedFilter vf;
+        vf.visited.insert(item);
+        vf.filter = filter;
+
+        std::vector<Collision> projected_cols;
+        project(item, x, y, z, w, h, d, goalX, goalY, goalZ, &vf,
+                projected_cols);
+
+        while (projected_cols.size() > 0) {
+            Collision col = projected_cols[0];
+            vf.visited.insert(col.other);
+            Response *response = getResponseById(col.type);
+
+            projected_cols.clear();
+            response->ComputeResponse(this, col, x, y, z, w, h, d, goalX, goalY,
+                                      goalZ, &vf, goalX, goalY, goalZ,
+                                      projected_cols);
+
+            cols.push_back(col);
+        }
+
+        actualX = goalX;
+        actualY = goalY;
+        actualZ = goalZ;
+    }
+
+    bool hasItem(int item)
+    {
+        return cubes.find(item) != cubes.end();
+    }
+
+    void toWorld(int cx, int cy, int cz, double &x, double &y, double &z)
+    {
+        grid_toWorld(cellSize, cx, cy, cz, x, y, z);
+    }
+
+    void toCell(double x, double y, double z, int &cx, int &cy, int &cz)
+    {
+        grid_toCell(cellSize, x, y, z, cx, cy, cz);
+    }
+
+    //--- Query methods
+
+    void queryCube(double x, double y, double z, double w, double h, double d,
+                   ItemFilter *filter, std::set<int> &dictItemsInCellCube)
+    {
+        int cx, cy, cz, cw, ch, cd;
+        grid_toCellCube(cellSize, x, y, z, w, h, d, cx, cy, cz, cw, ch, cd);
+        getDictItemsInCellCube(cx, cy, cz, cw, ch, cd, dictItemsInCellCube);
+        for (std::set<int>::iterator it = dictItemsInCellCube.begin();
+             it != dictItemsInCellCube.end();) {
+            bool drop = (filter && !filter->Filter(*it));
+            if (!drop) {
+                Cube cube = cubes[*it];
+                drop |= !cube_isIntersecting(x, y, z, w, h, d, cube.x, cube.y,
+                                             cube.z, cube.w, cube.h, cube.d);
+            }
+            if (drop) {
+                dictItemsInCellCube.erase(it++);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    void queryPoint(double x, double y, double z, ItemFilter *filter,
+                    std::set<int> &dictItemsInCellCube)
+    {
+        int cx, cy, cz;
+        toCell(x, y, z, cx, cy, cz);
+        getDictItemsInCellCube(cx, cy, cz, 1, 1, 1, dictItemsInCellCube);
+        for (std::set<int>::iterator it = dictItemsInCellCube.begin();
+             it != dictItemsInCellCube.end();) {
+            Cube cube = cubes[*it];
+
+            if ((filter && !filter->Filter(*it)) ||
+                !cube_containsPoint(cube.x, cube.y, cube.z, cube.w, cube.h,
+                                    cube.d, x, y, z)) {
+                dictItemsInCellCube.erase(it++);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    void querySegment(double x1, double y1, double z1, double x2, double y2,
+                      double z2, ItemFilter *filter, std::set<int> &items)
+    {
+        std::vector<ItemInfo> itemInfo;
+        getInfoAboutItemsTouchedBySegment(x1, y1, z1, x2, y2, z2, filter,
+                                          itemInfo);
+        for (std::vector<ItemInfo>::iterator it = itemInfo.begin();
+             it != itemInfo.end(); it++) {
+            items.insert((*it).item);
+        }
+    }
+
+    void querySegmentWithCoords(double x1, double y1, double z1, double x2,
+                                double y2, double z2, ItemFilter *filter,
+                                std::vector<ItemInfo> &itemInfo2)
+    {
+        std::vector<ItemInfo> itemInfo;
+        getInfoAboutItemsTouchedBySegment(x1, y1, z1, x2, y2, z2, filter,
+                                          itemInfo);
+        double dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
+        for (std::vector<ItemInfo>::iterator it = itemInfo.begin();
+             it != itemInfo.end(); it++) {
+            ItemInfo i = *it;
+            i.x1       = x1 + dx * i.ti1;
+            i.y1       = y1 + dy * i.ti1;
+            i.z1       = z1 + dz * i.ti1;
+            i.x2       = x1 + dx * i.ti2;
+            i.y2       = y1 + dy * i.ti2;
+            i.z2       = z2 + dz * i.ti2;
+            itemInfo2.push_back(i);
+        }
+    }
+
+    //--- Main methods
+    int allocateId()
+    {
+        if (itemId >= INT_MAX) {
+            itemId = 0;
+        }
+
+        int nid = (++itemId);
+
+        while (hasItem(nid)) {
+            nid++;
+        }
+
+        itemId = nid;
+        return nid;
+    }
+
+    void add(int item, double x, double y, double z, double w, double h,
+             double d)
+    {
+        Cube cube;
+        cube.x      = x;
+        cube.y      = y;
+        cube.z      = z;
+        cube.w      = w;
+        cube.h      = h;
+        cube.d      = d;
+        cubes[item] = cube;
+
+        int cl, ct, cs, cw, ch, cd;
+
+        grid_toCellCube(cellSize, x, y, z, w, h, d, cl, ct, cs, cw, ch, cd);
+
+        for (int cz = cs; cz < cs + cd; cz++) {
+            for (int cy = ct; cy < ct + ch; cy++) {
+                for (int cx = cl; cx < cl + cw; cx++) {
+                    addItemToCell(item, cx, cy, cz);
+                }
+            }
+        }
+    }
+
+    void remove(int item)
+    {
+        Cube cube = cubes[item];
+
+        int cl, ct, cs, cw, ch, cd;
+        grid_toCellCube(cellSize, cube.x, cube.y, cube.z, cube.w, cube.h,
+                        cube.d, cl, ct, cs, cw, ch, cd);
+        for (int cz = cs; cz < cs + cd; cz++) {
+            for (int cy = ct; cy < ct + ch; cy++) {
+                for (int cx = cl; cx < cl + cw; cx++) {
+                    removeItemFromCell(item, cx, cy, cz);
+                }
+            }
+        }
+
+        cubes.erase(item);
+    }
+
+    void clear()
+    {
+        itemId = 0;
+        cubes.clear();
+        cells.clear();
+    }
+
+    void update(int item, double x2, double y2, double z2, double w2, double h2,
+                double d2)
+    {
+        Cube cube = cubes[item];
+
+        if (w2 <= 0) {
+            w2 = cube.w;
+        }
+        if (h2 <= 0) {
+            h2 = cube.h;
+        }
+        if (d2 <= 0) {
+            d2 = cube.d;
+        }
+        if ((cube.x == x2) && (cube.y == y2) && (cube.w == w2) &&
+            (cube.h == h2) && (cube.d == d2)) {
+            return;
+        }
+
+        int cl1, ct1, cs1, cw1, ch1, cd1;
+        grid_toCellCube(cellSize, cube.x, cube.y, cube.z, cube.w, cube.h,
+                        cube.d, cl1, ct1, cs1, cw1, ch1, cd1);
+        int cl2, ct2, cs2, cw2, ch2, cd2;
+        grid_toCellCube(cellSize, x2, y2, z2, w2, h2, d2, cl2, ct2, cs2, cw2,
+                        ch2, cd2);
+
+        if ((cl1 != cl2) || (ct1 != ct2) || (cs1 != cs2) || (cw1 != cw2) ||
+            (ch1 != ch2) || (cd1 != cd2)) {
+            int cr1 = cl1 + cw1 - 1, cb1 = ct1 + ch1 - 1;
+            int cr2 = cl2 + cw2 - 1, cb2 = ct2 + ch2 - 1;
+            int css1 = cs1 + cd1 - 1, css2 = cs2 + cd2 - 1;
+
+            bool cyOut, czOut;
+
+            for (int cz = cs1; cz <= css1; cz++) {
+                czOut = cz < cs2 || cz > css2;
+
+                for (int cy = ct1; cy <= cb1; cy++) {
+                    cyOut = (cy < ct2) || (cy > cb2);
+
+                    for (int cx = cl1; cx <= cr1; cx++) {
+                        if (czOut || cyOut || (cx < cl2) || (cx > cr2)) {
+                            removeItemFromCell(item, cx, cy, cz);
+                        }
+                    }
+                }
+            }
+
+            for (int cz = cs2; cz <= css2; cz++) {
+                czOut = cz < cs1 || cz > css1;
+
+                for (int cy = ct2; cy <= cb2; cy++) {
+                    cyOut = (cy < ct1) || (cy > cb1);
+
+                    for (int cx = cl2; cx <= cr2; cx++) {
+                        if (czOut || cyOut || (cx < cl1) || (cx > cr1)) {
+                            addItemToCell(item, cx, cy, cz);
+                        }
+                    }
+                }
+            }
+
+            Cube c;
+            c.x         = x2;
+            c.y         = y2;
+            c.z         = z2;
+            c.w         = w2;
+            c.h         = h2;
+            c.d         = d2;
+            cubes[item] = c;
+        }
+    }
+
+    void check(int item, double goalX, double goalY, double goalZ,
+               ColFilter *filter, double &actualX, double &actualY,
+               double &actualZ, std::vector<Collision> &cols)
+    {
+        Cube cube = cubes[item];
+        projectMove(item, cube.x, cube.y, cube.z, cube.w, cube.h, cube.d, goalX,
+                    goalY, goalZ, filter, actualX, actualY, actualZ, cols);
+    }
+
+    void move(int item, double goalX, double goalY, double goalZ,
+              ColFilter *filter, double &actualX, double &actualY,
+              double &actualZ, std::vector<Collision> &cols)
+    {
+        check(item, goalX, goalY, goalZ, filter, actualX, actualY, actualZ,
+              cols);
+        update(item, actualX, actualY, actualZ, -1, -1, -1);
     }
 };
 

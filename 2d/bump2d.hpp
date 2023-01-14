@@ -387,8 +387,8 @@ struct VisitedFilter : ColFilter {
 };
 
 /*------------------------------------------
- -- Responses
- ------------------------------------------*/
+-- Responses
+------------------------------------------*/
 struct Response {
     virtual void ComputeResponse(World *world, Collision &col, double x,
                                  double y, double w, double h, double goalX,
@@ -399,8 +399,8 @@ struct Response {
 };
 
 /*------------------------------------------
- -- World
- ------------------------------------------*/
+-- World
+------------------------------------------*/
 
 struct Cell {
     std::set<int> items;
@@ -583,7 +583,6 @@ struct World {
         return filters[id];
     }
 
-    // filters
     void project(int item, double x, double y, double w, double h, double goalX,
                  double goalY, ColFilter *filter,
                  std::vector<Collision> &collisions)
