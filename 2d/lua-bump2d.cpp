@@ -461,79 +461,20 @@ static int bumpWorldRelease(lua_State *L)
         return luaL_argerror(L, 1, "invalid lua-bump pointer");
     }
 
-    World *world = bump->world;
-
-    Response *responseTouch = world->getResponseById(Touch);
-    delete responseTouch;
-
-    Response *responseCross = world->getResponseById(Cross);
-    delete responseCross;
-
-    Response *responseSlide = world->getResponseById(Slide);
-    delete responseSlide;
-
-    Response *responseBounce = world->getResponseById(Bounce);
-    delete responseBounce;
-
-    world->responses.erase(Touch);
-    world->responses.erase(Cross);
-    world->responses.erase(Bounce);
-    world->responses.erase(Slide);
-
-    ColFilter *filterTouch = world->getFilterById(Touch);
-    delete filterTouch;
-
-    ColFilter *filterCross = world->getFilterById(Cross);
-    delete filterCross;
-
-    ColFilter *filterSlide = world->getFilterById(Slide);
-    delete filterSlide;
-
-    ColFilter *filterBounce = world->getFilterById(Bounce);
-    delete filterBounce;
-
-    world->filters.erase(Touch);
-    world->filters.erase(Cross);
-    world->filters.erase(Bounce);
-    world->filters.erase(Slide);
-
-    world->clear();
-
-    delete world;
+    bump->world->release();
+    delete bump->world;
     bump->world = NULL;
     return 0;
 }
 
 static int bumpNewWorld(lua_State *L)
 {
-    if (!lua_isnoneornil(L, 1)) {
-        assertIsPositiveNumber(L, 1, "cellSize");
-    }
-    int cs = luaL_optinteger(L, 1, 64);
+    int cellSize = luaL_optinteger(L, 1, 64);
 
-    BumpWorld2d *bump = (BumpWorld2d *)lua_newuserdatauv(L, sizeof(World), 0);
-    World *world      = new World(cs);
+    BumpWorld2d *bump = (BumpWorld2d *)lua_newuserdatauv(L, sizeof(BumpWorld2d), 0);
+    World *world      = new World();
+    world->initialize(cellSize);
     bump->world       = world;
-
-    CrossFilter *filterCross   = new CrossFilter();
-    TouchFilter *filterTouch   = new TouchFilter();
-    SlideFilter *filterSlide   = new SlideFilter();
-    BounceFilter *filterBounce = new BounceFilter();
-
-    world->addFilter(Touch, filterTouch);
-    world->addFilter(Cross, filterCross);
-    world->addFilter(Slide, filterSlide);
-    world->addFilter(Bounce, filterBounce);
-
-    CrossResponse *responseCross   = new CrossResponse();
-    TouchResponse *responseTouch   = new TouchResponse();
-    SlideResponse *responseSlide   = new SlideResponse();
-    BounceResponse *responseBounce = new BounceResponse();
-
-    world->addResponse(Touch, responseTouch);
-    world->addResponse(Cross, responseCross);
-    world->addResponse(Slide, responseSlide);
-    world->addResponse(Bounce, responseBounce);
 
     if (luaL_newmetatable(L, METANAME)) // mt
     {

@@ -419,6 +419,75 @@ struct ItemFilter {
     virtual ~ItemFilter(){};
 };
 
+struct CrossResponse;
+struct TouchResponse;
+struct SlideResponse;
+struct BounceResponse;
+
+struct SlideFilter : ColFilter {
+    int Filter(int item, int other)
+    {
+        UNUSED(item);
+        UNUSED(other);
+        return Slide;
+    };
+};
+
+struct TouchFilter : ColFilter {
+    int Filter(int item, int other)
+    {
+        UNUSED(item);
+        UNUSED(other);
+        return Touch;
+    };
+};
+
+struct CrossFilter : ColFilter {
+    int Filter(int item, int other)
+    {
+        UNUSED(item);
+        UNUSED(other);
+        return Cross;
+    };
+};
+
+struct BounceFilter : ColFilter {
+    int Filter(int item, int other)
+    {
+        UNUSED(item);
+        UNUSED(other);
+        return Bounce;
+    };
+};
+
+struct TouchResponse : Response {
+    void ComputeResponse(World *world, Collision &col, double x, double y,
+                         double w, double h, double goalX, double goalY,
+                         ColFilter *filter, double &actualX, double &actualY,
+                         std::vector<Collision> &cols);
+};
+
+struct CrossResponse : Response {
+    void ComputeResponse(World *world, Collision &col, double x, double y,
+                         double w, double h, double goalX, double goalY,
+                         ColFilter *filter, double &actualX, double &actualY,
+                         std::vector<Collision> &cols);
+};
+
+struct SlideResponse : Response {
+    void ComputeResponse(World *world, Collision &col, double x, double y,
+                         double w, double h, double goalX, double goalY,
+                         ColFilter *filter, double &actualX, double &actualY,
+                         std::vector<Collision> &cols);
+};
+
+struct BounceResponse : Response {
+    void ComputeResponse(World *world, Collision &col, double x, double y,
+                         double w, double h, double goalX, double goalY,
+                         ColFilter *filter, double &actualX, double &actualY,
+                         std::vector<Collision> &cols);
+};
+
 struct World {
     int cellSize;
     int itemId;
@@ -427,10 +496,77 @@ struct World {
     std::map<int, Rect> rects;
     std::map<int, std::map<int, Cell> > rows;
 
-    World(int cs)
+    void initialize (int cellSize)
     {
-        cellSize = cs;
-        itemId   = 0;
+        this->cellSize = cellSize;
+        this->itemId = 0;
+
+        CrossFilter *filterCross   = new CrossFilter();
+        TouchFilter *filterTouch   = new TouchFilter();
+        SlideFilter *filterSlide   = new SlideFilter();
+        BounceFilter *filterBounce = new BounceFilter();
+
+        this->addFilter(Touch, filterTouch);
+        this->addFilter(Cross, filterCross);
+        this->addFilter(Slide, filterSlide);
+        this->addFilter(Bounce, filterBounce);
+
+        CrossResponse *responseCross   = new CrossResponse();
+        TouchResponse *responseTouch   = new TouchResponse();
+        SlideResponse *responseSlide   = new SlideResponse();
+        BounceResponse *responseBounce = new BounceResponse();
+
+        this->addResponse(Touch, responseTouch);
+        this->addResponse(Cross, responseCross);
+        this->addResponse(Slide, responseSlide);
+        this->addResponse(Bounce, responseBounce);
+    }
+
+    void release()
+    {
+        Response *responseTouch = this->getResponseById(Touch);
+        if(responseTouch) {
+            delete responseTouch;
+        }
+
+        Response *responseCross = this->getResponseById(Cross);
+        if(responseCross) {
+            delete responseCross;
+        }
+
+        Response *responseSlide = this->getResponseById(Slide);
+        if(responseSlide) {
+            delete responseSlide;
+        }
+
+        Response *responseBounce = this->getResponseById(Bounce);
+        if(responseBounce) {
+            delete responseBounce;
+        }
+
+        this->responses.erase(Touch);
+        this->responses.erase(Cross);
+        this->responses.erase(Bounce);
+        this->responses.erase(Slide);
+
+        ColFilter *filterTouch = this->getFilterById(Touch);
+        delete filterTouch;
+
+        ColFilter *filterCross = this->getFilterById(Cross);
+        delete filterCross;
+
+        ColFilter *filterSlide = this->getFilterById(Slide);
+        delete filterSlide;
+
+        ColFilter *filterBounce = this->getFilterById(Bounce);
+        delete filterBounce;
+
+        this->filters.erase(Touch);
+        this->filters.erase(Cross);
+        this->filters.erase(Bounce);
+        this->filters.erase(Slide);
+
+        this->clear();
     }
 
     //-- Private functions and methods
@@ -881,45 +1017,7 @@ struct World {
     }
 };
 
-
-struct SlideFilter : ColFilter {
-    int Filter(int item, int other)
-    {
-        UNUSED(item);
-        UNUSED(other);
-        return Slide;
-    };
-};
-
-struct TouchFilter : ColFilter {
-    int Filter(int item, int other)
-    {
-        UNUSED(item);
-        UNUSED(other);
-        return Touch;
-    };
-};
-
-struct CrossFilter : ColFilter {
-    int Filter(int item, int other)
-    {
-        UNUSED(item);
-        UNUSED(other);
-        return Cross;
-    };
-};
-
-struct BounceFilter : ColFilter {
-    int Filter(int item, int other)
-    {
-        UNUSED(item);
-        UNUSED(other);
-        return Bounce;
-    };
-};
-
-struct TouchResponse : Response {
-    void ComputeResponse(World *world, Collision &col, double x, double y,
+void TouchResponse::ComputeResponse(World *world, Collision &col, double x, double y,
                          double w, double h, double goalX, double goalY,
                          ColFilter *filter, double &actualX, double &actualY,
                          std::vector<Collision> &cols)
@@ -936,10 +1034,8 @@ struct TouchResponse : Response {
         actualX = col.touch.x;
         actualY = col.touch.y;
     }
-};
 
-struct CrossResponse : Response {
-    void ComputeResponse(World *world, Collision &col, double x, double y,
+void CrossResponse :: ComputeResponse (World *world, Collision &col, double x, double y,
                          double w, double h, double goalX, double goalY,
                          ColFilter *filter, double &actualX, double &actualY,
                          std::vector<Collision> &cols)
@@ -948,10 +1044,8 @@ struct CrossResponse : Response {
         actualX = goalX;
         actualY = goalY;
     }
-};
 
-struct SlideResponse : Response {
-    void ComputeResponse(World *world, Collision &col, double x, double y,
+void SlideResponse :: ComputeResponse (World *world, Collision &col, double x, double y,
                          double w, double h, double goalX, double goalY,
                          ColFilter *filter, double &actualX, double &actualY,
                          std::vector<Collision> &cols)
@@ -977,10 +1071,8 @@ struct SlideResponse : Response {
         actualX = goalX;
         actualY = goalY;
     }
-};
 
-struct BounceResponse : Response {
-    void ComputeResponse(World *world, Collision &col, double x, double y,
+void BounceResponse ::ComputeResponse (World *world, Collision &col, double x, double y,
                          double w, double h, double goalX, double goalY,
                          ColFilter *filter, double &actualX, double &actualY,
                          std::vector<Collision> &cols)
@@ -1010,6 +1102,5 @@ struct BounceResponse : Response {
         actualX = goalX;
         actualY = goalY;
     }
-};
 
 } // namespace bump
